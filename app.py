@@ -123,7 +123,7 @@ elif page == "🤖 Client Intake Extractor & Form Mapper":
 
                         st.markdown("---")
                         st.markdown("### 📝 Part B: Persecution Narrative Summary")
-                        st.info(f"**Harm Feared / Core Claim:** {extracted_data.get('harm_feared')}\n\underline{{Police/State Response:}} {extracted_data.get('police_involvement')}")
+                        st.info(f"**Harm Feared / Core Claim:** {extracted_data.get('harm_feared')}\n\n**Police/State Response:** {extracted_data.get('police_involvement')}")
 
                         # Word Document Export
                         doc = Document()
@@ -151,3 +151,6 @@ elif page == "🤖 Client Intake Extractor & Form Mapper":
                         st.error(f"Extraction Error: {e}")
             else:
                 st.warning("⚠️ Please paste client notes before running extraction.")
+
+    
+         
