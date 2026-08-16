@@ -1,6 +1,7 @@
 import streamlit as st
 import openai
 import json
+import docx
 from io import BytesIO
 from docx import Document
 
@@ -19,148 +20,97 @@ openai_api_key = st.secrets.get("OPENAI_API_KEY")
 
 if page == "🏠 Overview":
     st.title("📄 Form I-589 Legal Intake & Affidavit Generator")
-    st.subheader("Structured Document Automation for Asylum Applications")
+    st.subheader("Multimodal Legal Data Pipeline")
 
     st.markdown("""
-    Welcome to the **Form I-589 Intake & Affidavit Generator**. Designed for legal aid advocates and immigration practitioners, 
-    this tool translates unstructured client consultation notes into rigorous, standardized data fields and a court-ready draft affidavit summary.
-    
-    By standardizing data extraction, this tool eliminates manual data entry bottlenecks and prevents cross-document discrepancies.
+    This application transforms unstructured legal intakes—whether text, documents, or audio recordings—into 
+    standardized USCIS-compliant legal packets. By utilizing OpenAI Whisper for transcription and GPT-4o for 
+    schema mapping, it minimizes manual data entry and ensures consistent case data across all filings.
     """)
 
-    st.divider()
-
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        st.markdown("#### 📝 Intake Ingestion")
-        st.markdown("Drop in raw consultation notes, rough interview transcripts, or client narratives.")
-    with col2:
-        st.markdown("#### ⚡ Schema Harmonization")
-        st.markdown("Extracts and structures Part A (Biographic) and Part B (Persecution Narrative) data.")
-    with col3:
-        st.markdown("#### 📥 Attorney-Ready Export")
-        st.markdown("Instantly export structured information into a clean, editable Word document (.docx) for legal files.")
-
-    st.divider()
-    st.success("👈 Select **🤖 Intake & Affidavit Generator** in the sidebar to test an intake.")
-
 elif page == "🤖 Intake & Affidavit Generator":
-    st.title("🤖 Client Intake to Legal Affidavit & Form Schema")
-    st.write("Paste raw client consultation notes below to extract, structure, and generate an attorney-ready case packet.")
-
+    st.title("🤖 Multimodal Intake Generator")
+    
     if not openai_api_key:
         st.warning("⚠️ Please configure your OPENAI_API_KEY in your Streamlit app secrets.")
     else:
         client = openai.OpenAI(api_key=openai_api_key)
 
-        sample_notes = (
-            "Client Name: Juan Carlos Perez-Gomez. DOB: 04/12/1990. Country of Citizenship: Honduras. "
-            "Current Address: 1450 Elm St, Denver, CO 80220. Entered the US without inspection through El Paso on "
-            "January 15, 2025. Married to Maria Gomez, children: Sofia Perez (age 5). "
-            "Persecution details: Left Honduras after local gang MS-13 extorted his auto repair shop and threatened to kill him "
-            "if he did not pay a monthly war tax. Reported extortion to local police in Tegucigalpa on October 2024, "
-            "but police laughed and told him they work with the gang. He fears returning because police are corrupt and gang members know where his family lives."
-        )
+        # INPUT OPTIONS: Text, Document, or Audio
+        input_type = st.radio("Choose intake source:", ["Paste Text Notes", "Upload Document (.txt, .docx)", "Upload Audio Recording"])
+        
+        client_input = ""
 
-        client_input = st.text_area(
-            "Paste Raw Client Consultation Notes or Transcript:",
-            value=sample_notes,
-            height=200
-        )
+        if input_type == "Paste Text Notes":
+            client_input = st.text_area("Paste Raw Notes:", height=200)
 
+        elif input_type == "Upload Document (.txt, .docx)":
+            uploaded_file = st.file_uploader("Upload client transcript:", type=["txt", "docx"])
+            if uploaded_file:
+                if uploaded_file.name.endswith(".txt"):
+                    client_input = uploaded_file.getvalue().decode("utf-8")
+                else:
+                    doc = docx.Document(uploaded_file)
+                    client_input = "\n".join([para.text for para in doc.paragraphs])
+                st.text_area("Review Extracted Text:", value=client_input, height=100)
+
+        elif input_type == "Upload Audio Recording":
+            audio_file = st.file_uploader("Upload interview audio:", type=["mp3", "wav", "m4a"])
+            if audio_file and st.button("Transcribe Audio"):
+                with st.spinner("Transcribing..."):
+                    transcript = client.audio.transcriptions.create(model="whisper-1", file=audio_file)
+                    client_input = transcript.text
+                    st.success("Transcription complete!")
+                    st.text_area("Review Transcript:", value=client_input, height=100)
+
+        # GENERATION LOGIC
         if st.button("Generate Legal Intake Packet & Affidavit 🚀", type="primary"):
             if client_input.strip():
-                with st.spinner("Extracting biographic parameters and structuring legal narrative..."):
+                with st.spinner("Extracting biographic parameters and drafting narrative..."):
                     try:
-                        # Prompt engineering for comprehensive legal extraction
                         system_prompt = (
-                            "You are an expert immigration paralegal and legal writer. "
-                            "Extract information from the provided client consultation notes and output a valid JSON object "
-                            "matching the exact keys below:\n"
-                            "{\n"
-                            '  "full_name": "",\n'
-                            '  "dob": "",\n'
-                            '  "citizenship": "",\n'
-                            '  "current_us_address": "",\n'
-                            '  "date_of_entry": "",\n'
-                            '  "manner_of_entry": "",\n'
-                            '  "spouse_and_children": "",\n'
-                            '  "persecuting_agent": "",\n'
-                            '  "harm_feared": "",\n'
-                            '  "police_involvement": "",\n'
-                            '  "draft_affidavit_narrative": ""\n'
-                            "}\n"
-                            "For 'draft_affidavit_narrative', write a professional, first-person legal narrative summary suitable for inclusion in an asylum application affidavit based on the facts provided."
+                            "You are an expert immigration paralegal. "
+                            "Extract data into JSON: full_name, dob, citizenship, current_us_address, "
+                            "date_of_entry, manner_of_entry, spouse_and_children, persecuting_agent, "
+                            "harm_feared, police_involvement, draft_affidavit_narrative."
                         )
 
                         response = client.chat.completions.create(
                             model="gpt-4o-mini",
-                            messages=[
-                                {"role": "system", "content": system_prompt},
-                                {"role": "user", "content": client_input}
-                            ],
+                            messages=[{"role": "system", "content": system_prompt}, {"role": "user", "content": client_input}],
                             response_format={"type": "json_object"},
                             temperature=0.0
                         )
 
-                        extracted_data = json.loads(response.choices[0].message.content)
+                        data = json.loads(response.choices[0].message.content)
 
-                        st.success("Legal Intake Packet & Affidavit Generated Successfully!")
-                        st.markdown("---")
-                        
-                        # Display Form Fields in UI Dashboard Layout
-                        st.markdown("### 📋 Form I-589 Part A: Biographic Field Preview")
-                        
-                        col1, col2 = st.columns(2)
-                        with col1:
-                            st.markdown(f"**Full Name:** {extracted_data.get('full_name')}")
-                            st.markdown(f"**Date of Birth:** {extracted_data.get('dob')}")
-                            st.markdown(f"**Citizenship:** {extracted_data.get('citizenship')}")
-                            st.markdown(f"**U.S. Address:** {extracted_data.get('current_us_address')}")
-                        with col2:
-                            st.markdown(f"**Date of Entry:** {extracted_data.get('date_of_entry')}")
-                            st.markdown(f"**Manner of Entry:** {extracted_data.get('manner_of_entry')}")
-                            st.markdown(f"**Family Members:** {extracted_data.get('spouse_and_children')}")
-                            st.markdown(f"**Persecuting Agent:** {extracted_data.get('persecuting_agent')}")
+                        # UI PREVIEW
+                        st.success("Packet Generated!")
+                        st.json(data)
 
-                        st.markdown("---")
-                        st.markdown("### 📝 Part B: Draft Affidavit Narrative Summary")
-                        st.info(extracted_data.get('draft_affidavit_narrative'))
-
-                        # Word Document Export for Legal File
+                        # WORD EXPORT
                         doc = Document()
-                        doc.add_heading("Form I-589 Legal Intake & Case Packet", level=1)
-                        doc.add_paragraph("CONFIDENTIAL ATTORNEY-CLIENT PRIVILEGED DOCUMENT\n")
-                        
-                        doc.add_heading("Part A: Biographic & Entry Data", level=2)
-                        for key in ["full_name", "dob", "citizenship", "current_us_address", "date_of_entry", "manner_of_entry", "spouse_and_children"]:
-                            val = extracted_data.get(key, "Not Provided")
-                            doc.add_paragraph(f"{key.replace('_', ' ').title()}: {val}")
-
-                        doc.add_heading("Part B: Persecution Claim & Draft Affidavit", level=2)
-                        doc.add_paragraph(extracted_data.get('draft_affidavit_narrative', ''))
+                        doc.add_heading("Form I-589 Legal Intake Packet", level=1)
+                        for key, val in data.items():
+                            doc.add_heading(key.replace('_', ' ').title(), level=2)
+                            doc.add_paragraph(str(val))
 
                         doc_io = BytesIO()
                         doc.save(doc_io)
                         doc_io.seek(0)
 
-                        client_slug = extracted_data.get('full_name', 'Client').replace(' ', '_')
                         st.download_button(
-                            label="📥 Download Court-Ready Legal Packet (.docx)",
+                            label="📥 Download Court-Ready Packet (.docx)",
                             data=doc_io,
-                            file_name=f"Form_I_589_Packet_{client_slug}.docx",
+                            file_name="Legal_Intake_Packet.docx",
                             mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                         )
-
-                        st.markdown("---")
-                        st.markdown("### 🔒 Human-in-the-Loop (HITL) Validation")
-                        st.checkbox("Paralegal / Attorney Verification: Confirm extracted schema and affidavit narrative against client interview records prior to final filing.")
-
                     except Exception as e:
-                        st.error(f"Generation Error: {e}")
+                        st.error(f"Error: {e}")
             else:
-                st.warning("⚠️ Please paste client notes before running extraction.")
-        
-                        
+                st.warning("⚠️ Please provide input data.")
+      
+
+                   
                       
                           
