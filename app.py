@@ -23,9 +23,8 @@ if page == "🏠 Overview":
     st.subheader("Multimodal Legal Data Pipeline")
 
     st.markdown("""
-    This application transforms unstructured legal intakes—whether text, documents, or audio recordings—into 
-    standardized USCIS-compliant legal packets. By utilizing OpenAI Whisper for transcription and GPT-4o for 
-    schema mapping, it minimizes manual data entry and ensures consistent case data across all filings.
+    This application transforms unstructured legal intakes—whether text, documents, or WhatsApp audio—into 
+    standardized USCIS-compliant legal packets. 
     """)
 
 elif page == "🤖 Intake & Affidavit Generator":
@@ -37,7 +36,7 @@ elif page == "🤖 Intake & Affidavit Generator":
         client = openai.OpenAI(api_key=openai_api_key)
 
         # INPUT OPTIONS: Text, Document, or Audio
-        input_type = st.radio("Choose intake source:", ["Paste Text Notes", "Upload Document (.txt, .docx)", "Upload Audio Recording"])
+        input_type = st.radio("Choose intake source:", ["Paste Text Notes", "Upload Document (.txt, .docx)", "Upload Audio Recording (WhatsApp/MP3/WAV)"])
         
         client_input = ""
 
@@ -54,8 +53,9 @@ elif page == "🤖 Intake & Affidavit Generator":
                     client_input = "\n".join([para.text for para in doc.paragraphs])
                 st.text_area("Review Extracted Text:", value=client_input, height=100)
 
-        elif input_type == "Upload Audio Recording":
-            audio_file = st.file_uploader("Upload interview audio:", type=["mp3", "wav", "m4a"])
+        elif input_type == "Upload Audio Recording (WhatsApp/MP3/WAV)":
+            # Added support for WhatsApp audio formats (ogg, opus)
+            audio_file = st.file_uploader("Upload interview audio (WhatsApp/MP3/WAV/OGG):", type=["mp3", "wav", "m4a", "ogg", "opus"])
             if audio_file and st.button("Transcribe Audio"):
                 with st.spinner("Transcribing..."):
                     transcript = client.audio.transcriptions.create(model="whisper-1", file=audio_file)
@@ -109,8 +109,8 @@ elif page == "🤖 Intake & Affidavit Generator":
                         st.error(f"Error: {e}")
             else:
                 st.warning("⚠️ Please provide input data.")
-      
 
+                       
                    
                       
                           
