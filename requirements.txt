@@ -3,3 +3,4 @@ openai
 pydantic
 python-docx
 pypdf
+cryptography
