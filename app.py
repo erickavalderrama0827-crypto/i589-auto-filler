@@ -6,46 +6,49 @@ from docx import Document
 
 # Page Configuration
 st.set_page_config(
-    page_title="Form I-589 Intelligent Auto-Filler | Legal Automation",
+    page_title="Form I-589 Intake & Auto-Mapper | Legal Automation",
     page_icon="📄",
     layout="wide"
 )
 
 # Sidebar Navigation
-st.sidebar.title("Form I-589 Auto-Filler Suite")
-page = st.sidebar.radio("Navigation", ["🏠 Overview", "🤖 Client Intake Extractor & Form Mapper"])
+st.sidebar.title("Form I-589 Suite")
+page = st.sidebar.radio("Navigation", ["🏠 Overview", "🤖 Client Intake & Form Field Mapper"])
 
 openai_api_key = st.secrets.get("OPENAI_API_KEY")
 
 if page == "🏠 Overview":
-    st.title("📄 Form I-589 Intelligent Auto-Filler")
+    st.title("📄 Form I-589 Intelligent Intake & Schema Mapper")
     st.subheader("Structured Document Automation for Asylum Applications")
 
     st.markdown("""
-    Welcome to the **Form I-589 Auto-Filler**, an intelligent document automation tool designed to bridge the gap between unstructured client consultation notes and official USCIS form fields. 
+    Welcome to the **Form I-589 Intake & Schema Mapper**. Designed for immigration attorneys and legal aid advocates, 
+    this tool eliminates manual data entry bottlenecks by translating unstructured client consultation transcripts into 
+    rigorous, standardized data fields matching official USCIS Form I-589 requirements.
     
-    By leveraging strict JSON schema extraction, this app transforms raw client transcripts into structured biographical data and legally framed persecution narratives, reducing administrative prep time by over 70%.
+    By ensuring internal data consistency across biographical entries and persecution narratives, this tool safeguards 
+    against the discrepancies that frequently trigger Requests for Evidence (RFFs) or credibility challenges.
     """)
 
     st.divider()
 
     col1, col2, col3 = st.columns(3)
     with col1:
-        st.markdown("#### 📝 Unstructured Intake Ingestion")
-        st.markdown("Drop in raw consultation notes, rough transcripts, or interview audio summaries.")
+        st.markdown("#### 📝 Intake Ingestion")
+        st.markdown("Drop in raw consultation notes, rough interview transcripts, or client narratives.")
     with col2:
-        st.markdown("#### ⚡ Intelligent Schema Mapping")
-        st.markdown("Automatically extracts data fields matching Form I-589 Part A (Biographic) and Part B (Narrative).")
+        st.markdown("#### ⚡ Schema Harmonization")
+        st.markdown("Extracts and maps standard fields for Part A (Biographic) and Part B (Narrative Summary).")
     with col3:
-        st.markdown("#### 📥 Structured Export")
-        st.markdown("Instantly export structured data and narrative summaries into a clean Word document for legal review.")
+        st.markdown("#### 📥 Attorney-Ready Export")
+        st.markdown("Instantly export structured information into a clean Word document (.docx) for legal review and case files.")
 
     st.divider()
-    st.success("👈 Select **🤖 Client Intake Extractor & Form Mapper** in the sidebar to test an intake.")
+    st.success("👈 Select **🤖 Client Intake & Form Field Mapper** in the sidebar to test an intake.")
 
-elif page == "🤖 Client Intake Extractor & Form Mapper":
+elif page == "🤖 Client Intake & Form Field Mapper":
     st.title("🤖 Client Intake to Form I-589 Mapper")
-    st.write("Paste raw client consultation notes below to automatically extract and map data fields for Form I-589.")
+    st.write("Paste raw client consultation notes below to extract, structure, and map data for Form I-589 preparation.")
 
     if not openai_api_key:
         st.warning("⚠️ Please configure your OPENAI_API_KEY in your Streamlit app secrets.")
@@ -67,7 +70,7 @@ elif page == "🤖 Client Intake Extractor & Form Mapper":
             height=200
         )
 
-        if st.button("Extract & Map to Form I-589 Schema 🚀", type="primary"):
+        if st.button("Extract & Map Form I-589 Fields 🚀", type="primary"):
             if client_input.strip():
                 with st.spinner("Extracting biographic fields and structuring asylum narrative..."):
                     try:
@@ -106,8 +109,8 @@ elif page == "🤖 Client Intake Extractor & Form Mapper":
                         st.success("Form I-589 Data Extracted & Mapped Successfully!")
                         st.markdown("---")
                         
-                        # Display Form Fields in UI
-                        st.markdown("### 📋 Form I-589 Mapped Fields Preview")
+                        # Display Form Fields in UI Dashboard Layout
+                        st.markdown("### 📋 Form I-589 Part A: Biographic Field Preview")
                         
                         col1, col2 = st.columns(2)
                         with col1:
@@ -125,10 +128,10 @@ elif page == "🤖 Client Intake Extractor & Form Mapper":
                         st.markdown("### 📝 Part B: Persecution Narrative Summary")
                         st.info(f"**Harm Feared / Core Claim:** {extracted_data.get('harm_feared')}\n\n**Police/State Response:** {extracted_data.get('police_involvement')}")
 
-                        # Word Document Export
+                        # Word Document Export for Legal File
                         doc = Document()
                         doc.add_heading("Form I-589 Intake & Schema Export", level=1)
-                        doc.add_paragraph("Extracted Biographic and Statutory Claim Data:\n")
+                        doc.add_paragraph("Client Biographical & Statutory Claim Summary (Attorney Review Copy):\n")
                         for key, value in extracted_data.items():
                             doc.add_paragraph(f"{key.replace('_', ' ').title()}: {value}")
 
@@ -137,20 +140,23 @@ elif page == "🤖 Client Intake Extractor & Form Mapper":
                         doc_io.seek(0)
 
                         st.download_button(
-                            label="📥 Download Form I-589 Intake Summary (.docx)",
+                            label="📥 Download Form I-589 Review Summary (.docx)",
                             data=doc_io,
-                            file_name="Form_I_589_Extracted_Data.docx",
+                            file_name=f"Form_I_589_Intake_{extracted_data.get('full_name', 'Client').replace(' ', '_')}.docx",
                             mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                         )
 
                         st.markdown("---")
                         st.markdown("### 🔒 Human-in-the-Loop (HITL) Validation")
-                        st.checkbox("Paralegal / Attorney Verification: Confirm extracted schema values against raw client interview tape/notes.")
+                        st.checkbox("Paralegal / Attorney Verification: Confirm extracted schema values against raw client interview transcripts before official form population.")
 
                     except Exception as e:
                         st.error(f"Extraction Error: {e}")
             else:
                 st.warning("⚠️ Please paste client notes before running extraction.")
 
+     
+                        
+                
     
          
