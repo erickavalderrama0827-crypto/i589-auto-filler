@@ -20,11 +20,16 @@ openai_api_key = st.secrets.get("OPENAI_API_KEY")
 
 if page == "🏠 Overview":
     st.title("📄 Form I-589 Legal Intake & Affidavit Generator")
-    st.subheader("Multimodal Legal Data Pipeline")
+    st.subheader("Multilingual Legal Data Pipeline")
 
     st.markdown("""
     This application transforms unstructured legal intakes—whether text, documents, or WhatsApp audio—into 
     standardized USCIS-compliant legal packets. 
+    
+    **Features:**
+    *   **Multilingual Support:** Natively translates non-English intakes into professional legal English.
+    *   **Multimodal Input:** Handles WhatsApp voice notes, text notes, and documents.
+    *   **Court-Ready Export:** Generates standardized affidavit packets for attorney review.
     """)
 
 elif page == "🤖 Intake & Affidavit Generator":
@@ -54,10 +59,9 @@ elif page == "🤖 Intake & Affidavit Generator":
                 st.text_area("Review Extracted Text:", value=client_input, height=100)
 
         elif input_type == "Upload Audio Recording (WhatsApp/MP3/WAV)":
-            # Added support for WhatsApp audio formats (ogg, opus)
-            audio_file = st.file_uploader("Upload interview audio (WhatsApp/MP3/WAV/OGG):", type=["mp3", "wav", "m4a", "ogg", "opus"])
+            audio_file = st.file_uploader("Upload interview audio:", type=["mp3", "wav", "m4a", "ogg", "opus"])
             if audio_file and st.button("Transcribe Audio"):
-                with st.spinner("Transcribing..."):
+                with st.spinner("Transcribing and detecting language..."):
                     transcript = client.audio.transcriptions.create(model="whisper-1", file=audio_file)
                     client_input = transcript.text
                     st.success("Transcription complete!")
@@ -66,13 +70,17 @@ elif page == "🤖 Intake & Affidavit Generator":
         # GENERATION LOGIC
         if st.button("Generate Legal Intake Packet & Affidavit 🚀", type="primary"):
             if client_input.strip():
-                with st.spinner("Extracting biographic parameters and drafting narrative..."):
+                with st.spinner("Extracting parameters and translating to English..."):
                     try:
+                        # UPDATED SYSTEM PROMPT FOR MULTILINGUAL TRANSLATION
                         system_prompt = (
                             "You are an expert immigration paralegal. "
-                            "Extract data into JSON: full_name, dob, citizenship, current_us_address, "
-                            "date_of_entry, manner_of_entry, spouse_and_children, persecuting_agent, "
-                            "harm_feared, police_involvement, draft_affidavit_narrative."
+                            "Analyze the provided intake text, which may be in any language. "
+                            "Translate all content into professional legal English and extract the following into a valid JSON object: "
+                            "full_name, dob, citizenship, current_us_address, date_of_entry, manner_of_entry, "
+                            "spouse_and_children, persecuting_agent, harm_feared, police_involvement, "
+                            "draft_affidavit_narrative. "
+                            "The 'draft_affidavit_narrative' should be a professional, first-person narrative."
                         )
 
                         response = client.chat.completions.create(
@@ -109,8 +117,7 @@ elif page == "🤖 Intake & Affidavit Generator":
                         st.error(f"Error: {e}")
             else:
                 st.warning("⚠️ Please provide input data.")
-
-                       
-                   
+ 
+                        
                       
                           
